@@ -1,0 +1,78 @@
+syntax = "proto3";
+package ht.game.v1;
+option go_package = "github.com/haihhhhh/ht_server_game_template/common/protocol/generated;protocol";
+
+// 同一份源定义交给服务端和客户端各自生成，不在网络握手发送目录。
+message Messages { Basic basic = 1; }
+message Basic {
+  LoginReq login_req = 1;
+  LoginRep login_rep = 2;
+  ListRolesReq list_roles_req = 3;
+  ListRolesRep list_roles_rep = 4;
+  CreateRoleReq create_role_req = 5;
+  RoleInfo role_info = 6;
+  EnterReq enter_req = 7;
+  PlayerState player_state = 8;
+  CurrentReq current_req = 9;
+  LeaveReq leave_req = 10;
+  LeaveRep leave_rep = 11;
+  SetPreferencesReq set_preferences_req = 12;
+  AttackBossReq attack_boss_req = 13;
+  AttackBossRep attack_boss_rep = 14;
+  UseExpItemReq use_exp_item_req = 15;
+  ListZonesReq list_zones_req = 16;
+  ListZonesRep list_zones_rep = 17;
+  EnterRep enter_rep = 18;
+  CurrentRep current_rep = 19;
+  SetPreferencesRep set_preferences_rep = 20;
+  UseExpItemRep use_exp_item_rep = 21;
+  CreateRoleRep create_role_rep = 22;
+}
+
+message ListZonesReq {}
+message ListZonesRep { repeated ZoneInfo zones = 1; }
+message ZoneInfo { string id = 1; string name = 2; bool open = 3; }
+
+message LoginReq { string credential = 1; }
+message LoginRep { int64 account_id = 1; }
+message ListRolesReq { string zone = 1; }
+message ListRolesRep { repeated RoleInfo roles = 1; }
+message CreateRoleReq { string zone = 1; string name = 2; }
+message CreateRoleRep { RoleInfo role = 1; }
+message RoleInfo { int64 id = 1; string zone = 2; string name = 3; string status = 4; }
+message EnterReq { string zone = 1; int64 role_id = 2; }
+// 进入游戏才同步完整状态；普通业务响应不复用此消息。
+message EnterRep { PlayerState state = 1; }
+message CurrentReq {}
+// 显式请求整体同步，不在每次业务修改后自动调用。
+message CurrentRep { PlayerState state = 1; }
+message SetPreferencesReq { string preferences = 1; }
+message SetPreferencesRep { string preferences = 1; }
+message PlayerState { int64 role_id = 1; string name = 2; string preferences = 3; int64 login_count = 4; int64 challenges_left = 5; int64 online_seconds = 6; int64 experience = 7; int64 level = 8; repeated InventoryItem items = 9; }
+message InventoryItem { int32 item_id = 1; int64 count = 2; }
+message UseExpItemReq { int32 item_id = 1; int64 count = 2; }
+// 返回修改后的当前值；剩余数量为零时客户端移除该道具，不是再次扣减的差值。
+message UseExpItemRep { int32 item_id = 1; int64 remaining_count = 2; int64 experience = 3; int64 level = 4; }
+message LeaveReq {}
+message LeaveRep { bool save_confirmed = 1; }
+
+// 公共服务示例：伤害由服务端计算，客户端不能指定节点、区服或伤害。
+message AttackBossReq {}
+message AttackBossRep { int64 boss_hp = 1; int64 challenges_left = 2; }
+
+service Account {
+ rpc Login(LoginReq) returns (LoginRep);
+ rpc ListZones(ListZonesReq) returns (ListZonesRep);
+}
+service Roles {
+  rpc List(ListRolesReq) returns (ListRolesRep);
+  rpc Create(CreateRoleReq) returns (CreateRoleRep);
+}
+service Player {
+  rpc Enter(EnterReq) returns (EnterRep);
+  rpc Current(CurrentReq) returns (CurrentRep);
+  rpc SetPreferences(SetPreferencesReq) returns (SetPreferencesRep);
+  rpc AttackBoss(AttackBossReq) returns (AttackBossRep);
+  rpc UseExpItem(UseExpItemReq) returns (UseExpItemRep);
+  rpc Leave(LeaveReq) returns (LeaveRep);
+}
